@@ -20,19 +20,16 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: 'npm'
 
       - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
-
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+          cache: 'gradle'
 
       - name: Install Dependencies
-        run: npm install
+        run: npm ci || npm install --legacy-peer-deps
 
       - name: Run Tests
         run: npm run test
@@ -51,11 +48,17 @@ jobs:
       - name: Sync Capacitor Android
         run: npx cap sync android
 
+      - name: Grant Execute Permission for Gradlew
+        run: chmod +x android/gradlew
+
+      - name: Accept Android SDK Licenses
+        run: |
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+
       - name: Build Android APK
         run: |
-          chmod +x android/gradlew
           cd android
-          ./gradlew assembleRelease --stacktrace
+          ./gradlew assembleRelease --no-daemon --stacktrace
           cd ..
 
       - name: Create GitHub Release
@@ -67,6 +70,6 @@ jobs:
           prerelease: false
           files: |
             basoka-ai-web-production.tar.gz
-            android/app/build/outputs/apk/release/app-release-unsigned.apk
+            android/app/build/outputs/apk/release/*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
